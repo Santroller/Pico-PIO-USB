@@ -106,9 +106,9 @@ void __not_in_flash_func(pio_usb_bus_usb_transfer)(pio_port_t *pp,
       continue;
     }
   } else {
-    while (*pc < PIO_USB_TX_ENCODED_DATA_COMP) {
-      continue;
-    }
+    // while (*pc < PIO_USB_TX_ENCODED_DATA_COMP) {
+    //   continue;
+    // }
   }
 }
 
