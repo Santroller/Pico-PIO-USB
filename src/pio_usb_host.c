@@ -98,6 +98,16 @@ usb_device_t *pio_usb_host_init(const pio_usb_configuration_t *c) {
   return &pio_usb_device[0];
 }
 
+void pio_usb_host_deinit() {
+  pio_port_t *pp = PIO_USB_PIO_PORT(0);
+  root_port_t *root = PIO_USB_ROOT_PORT(0);
+  stop_timer();
+  if (_alarm_pool) {
+    alarm_pool_destroy(_alarm_pool);
+  }
+  pio_usb_bus_deinit(pp, root);
+}
+
 void pio_usb_host_stop(void) {
   cancel_timer_flag = true;
   while (cancel_timer_flag) {

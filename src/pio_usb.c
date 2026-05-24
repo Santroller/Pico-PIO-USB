@@ -323,6 +323,7 @@ static void configure_tx_channel(uint8_t ch, PIO pio, uint sm) {
 
 static void apply_config(pio_port_t *pp, const pio_usb_configuration_t *c,
                          root_port_t *port) {
+                          
   pp->pio_usb_tx = pio_get_instance(c->pio_tx_num);
   pp->sm_tx = c->sm_tx;
   pp->tx_ch = c->tx_ch;
@@ -396,7 +397,14 @@ void pio_usb_bus_init(pio_port_t *pp, const pio_usb_configuration_t *c,
   raw_packet[1] = USB_PID_PRE;
   pio_usb_ll_encode_tx_data(raw_packet, 2, pre_encoded);
 }
-
+void pio_usb_bus_deinit(pio_port_t *pp, root_port_t *root) {
+  printf("bus deinit\r\n");
+  pio_sm_unclaim(pp->pio_usb_tx, pp->sm_tx);
+  pio_sm_unclaim(pp->pio_usb_rx, pp->sm_rx);
+  pio_sm_unclaim(pp->pio_usb_rx, pp->sm_eop);
+  dma_unclaim_mask(1<<pp->tx_ch);
+  root->initialized = false;
+}
 //--------------------------------------------------------------------+
 // Application API
 //--------------------------------------------------------------------+
