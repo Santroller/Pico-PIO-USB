@@ -84,6 +84,9 @@ static void __no_inline_not_in_flash_func(send_pre)(pio_port_t *pp) {
 
 void __not_in_flash_func(pio_usb_bus_usb_transfer)(pio_port_t *pp,
                                               uint8_t *data, uint16_t len) {
+
+  uint32_t const bit_cycles = 4u * (pp->low_speed ? pp->clk_div_ls_tx.div_int
+                                                  : pp->clk_div_fs_tx.div_int);
   if (pp->need_pre) {
     send_pre(pp);
   }
@@ -92,24 +95,11 @@ void __not_in_flash_func(pio_usb_bus_usb_transfer)(pio_port_t *pp,
   dma_channel_transfer_from_buffer_now(pp->tx_ch, data, len);
   pp->pio_usb_tx->irq = IRQ_TX_ALL_MASK; // clear complete flag
 
-  io_ro_32 *pc = &pp->pio_usb_tx->sm[pp->sm_tx].addr;
   while ((pp->pio_usb_tx->irq & IRQ_TX_ALL_MASK) == 0) {
     continue;
   }
   pp->pio_usb_tx->irq = IRQ_TX_ALL_MASK; // clear complete flag
-
-  if (pp->low_speed) {
-    // For Low speed host, wait until EOP is fully sent. Otherwise, we can send another packet
-    // before inter-packet delay timeout, which is 2-bit time by USB specs.
-    // For Full speed, our overhead is probably enough without this additional wait.
-    while (*pc <= PIO_USB_TX_ENCODED_DATA_COMP) {
-      continue;
-    }
-  } else {
-    while (*pc < PIO_USB_TX_ENCODED_DATA_COMP) {
-      continue;
-    }
-  }
+  busy_wait_at_least_cycles(4u * bit_cycles);
 }
 
 void __no_inline_not_in_flash_func(pio_usb_bus_send_token)(pio_port_t *pp,
