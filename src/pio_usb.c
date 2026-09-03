@@ -224,8 +224,12 @@ int __no_inline_not_in_flash_func(pio_usb_bus_receive_packet_and_handshake)(
   // disrupted timer per issue #192) can otherwise keep this loop running
   // forever and overflow idx. The longest legal full-speed packet is ~685 us;
   // 1200 us leaves margin.
+   uint32_t const abs_start = get_time_us_32();
   uint32_t rx_start = start;
   while (1) {
+    if (get_time_us_32() - abs_start > 500) {
+      return -1;
+    }
     if (pio_sm_get_rx_fifo_level(pio_usb_rx, sm_rx)) {
       uint8_t data = pio_sm_get(pio_usb_rx, sm_rx) >> 24;
       if (idx < rx_buf_len) {

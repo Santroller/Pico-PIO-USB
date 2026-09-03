@@ -168,8 +168,11 @@ pio_usb_bus_get_line_state(root_port_t *root) {
 
 static __always_inline void pio_usb_bus_start_receive(const pio_port_t *pp) {
   pp->pio_usb_rx->irq = IRQ_RX_ALL_MASK;
-  while ((pp->pio_usb_rx->irq & IRQ_RX_ALL_MASK) != 0) {
-    continue;
+   for (uint32_t guard = 0;
+       (pp->pio_usb_rx->irq & IRQ_RX_ALL_MASK) != 0; guard++) {
+    if (guard > 50000) {
+      break;
+    }
   }
 }
 
