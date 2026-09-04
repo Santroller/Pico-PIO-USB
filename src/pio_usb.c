@@ -324,12 +324,11 @@ int __no_inline_not_in_flash_func(pio_usb_bus_receive_packet_and_handshake)(
 static __always_inline void add_pio_host_rx_program(PIO pio,
                                              const pio_program_t *program,
                                              const pio_program_t *debug_program,
-                                             uint *offset, int debug_pin) {
-  if (debug_pin < 0) {
-    *offset = pio_add_program(pio, program);
-  } else {
-    *offset = pio_add_program(pio, debug_program);
-  }
+                                             uint *offset, int debug_pin,
+                                             const pio_program_t **loaded_program) {
+  const pio_program_t *selected = debug_pin < 0 ? program : debug_program;
+  *offset = pio_add_program(pio, selected);
+  *loaded_program = selected;
 }
 
 static void __no_inline_not_in_flash_func(initialize_host_programs)(
@@ -351,7 +350,7 @@ static void __no_inline_not_in_flash_func(initialize_host_programs)(
 
   add_pio_host_rx_program(pp->pio_usb_rx, &usb_nrzi_decoder_program,
                           &usb_nrzi_decoder_debug_program, &pp->offset_rx,
-                          c->debug_pin_rx);
+                          c->debug_pin_rx, &pp->rx_program);
   usb_rx_fs_program_init(pp->pio_usb_rx, pp->sm_rx, pp->offset_rx, port->pin_dp,
                          port->pin_dm, c->debug_pin_rx);
   pp->rx_reset_instr = pio_encode_jmp(pp->offset_rx);
@@ -359,7 +358,7 @@ static void __no_inline_not_in_flash_func(initialize_host_programs)(
 
   add_pio_host_rx_program(pp->pio_usb_rx, &usb_edge_detector_program,
                           &usb_edge_detector_debug_program, &pp->offset_eop,
-                          c->debug_pin_eop);
+                          c->debug_pin_eop, &pp->eop_program);
   eop_detect_fs_program_init(pp->pio_usb_rx, c->sm_eop, pp->offset_eop,
                              port->pin_dp, port->pin_dm, true,
                              c->debug_pin_eop);
@@ -461,6 +460,11 @@ void pio_usb_bus_init(pio_port_t *pp, const pio_usb_configuration_t *c,
 }
 void pio_usb_bus_deinit(pio_port_t *pp, root_port_t *root) {
   printf("bus deinit\r\n");
+  // must undo initialize_host_programs()'s pio_add_program*() calls, otherwise PIO0's
+  // 32-word instruction memory is permanently consumed a bit more on every reinit
+  pio_remove_program(pp->pio_usb_tx, pp->fs_tx_program, pp->offset_tx);
+  pio_remove_program(pp->pio_usb_rx, pp->rx_program, pp->offset_rx);
+  pio_remove_program(pp->pio_usb_rx, pp->eop_program, pp->offset_eop);
   pio_sm_unclaim(pp->pio_usb_tx, pp->sm_tx);
   pio_sm_unclaim(pp->pio_usb_rx, pp->sm_rx);
   pio_sm_unclaim(pp->pio_usb_rx, pp->sm_eop);

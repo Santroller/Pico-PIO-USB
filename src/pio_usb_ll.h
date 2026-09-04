@@ -77,6 +77,8 @@ typedef struct {
   const pio_program_t *fs_tx_program;
   const pio_program_t *fs_tx_pre_program;
   const pio_program_t *ls_tx_program;
+  const pio_program_t *rx_program;
+  const pio_program_t *eop_program;
 
   pio_clk_div_t clk_div_fs_tx;
   pio_clk_div_t clk_div_fs_rx;
